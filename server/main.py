@@ -26,7 +26,7 @@ async def receive_data(data: Info):
     latest_data = data.dict()
     return {"status": "received"}
 
-@app.get("/submit")
+@app.get("/")
 def get_latest_data():
     if latest_data:
         return latest_data
