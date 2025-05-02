@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI,HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -13,21 +13,60 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-class Info(BaseModel):
-    name: str
-    message: str
+Items = []
+current_id = 0
+class TodoItem(BaseModel):
+    id:int
+    itemValue: str
+    completed: bool
 
-# Store the latest data
-latest_data: dict | None = None
+class TodoCreate(BaseModel):
+    itemValue: str
+    completed: bool
 
-@app.post("/submit")
-async def receive_data(data: Info):
-    global latest_data
-    latest_data = data.dict()
-    return {"status": "received"}
+
+
+
+@app.post("/items", response_model=TodoItem)
+async def add_item(item: TodoCreate):
+    global current_id
+    new_item = {
+        "id": current_id,
+        "itemValue": item.itemValue,
+        "completed": item.completed
+    }
+    Items.append(new_item)
+    current_id += 1
+    return new_item
 
 @app.get("/")
-def get_latest_data():
-    if latest_data:
-        return latest_data
-    return {"message": "No data submitted yet."}
+async def getItems():
+    return Items
+
+
+@app.get("/{id}")
+async def get_item(id: int):
+    for item in Items:
+        if item["id"] == id:
+            return item
+    raise HTTPException(status_code=404, detail="Item not found")
+
+
+@app.put("/items/{id}", response_model=TodoItem)
+async def toggle_item(id: int):
+    for item in Items:
+        if item["id"] == id:
+            item["completed"] = not item["completed"]
+            return item
+    raise HTTPException(status_code=404, detail="Item not found")
+
+
+@app.delete("/items/{id}", response_model=TodoItem)
+async def delete_item(id: int):
+    for i, item in enumerate(Items):
+        if item["id"] == id:
+            deleted = Items.pop(i)
+            return deleted
+    raise HTTPException(status_code=404, detail="Item not found")
+
+
